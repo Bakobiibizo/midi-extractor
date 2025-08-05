@@ -51,3 +51,21 @@ class TranscriptionModel(nn.Module):
             "frame": torch.sigmoid(self.frame_head(x)),     # [B, T, 128]
             "velocity": self.velocity_head(x)               # [B, T, 128]
         }
+
+
+if __name__ == "__main__":
+    model = TranscriptionModel()
+    dummy_input = torch.randn(2, 128, 861)  # [B, MELS, T]
+    out = model(dummy_input)
+
+    output = ""
+    for key in out:
+        output += f"{key}: {out[key].shape}\n"
+        
+
+    expected_output = """onset: torch.Size([2, 861, 128])\nframe: torch.Size([2, 861, 128])\nvelocity: torch.Size([2, 861, 128])\n"""
+
+    error_message = f"Output does not match expected output.\nOutput:\n{output}\nExpected:\n{expected_output}"    
+    
+    assert output == expected_output, error_message
+    print(f"Output matches expected output.\n\nOutput:\n{output}\nExpected:\n{expected_output}")
