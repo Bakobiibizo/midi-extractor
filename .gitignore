@@ -221,3 +221,7 @@ datasets/
 # uv
 
 uv.lock
+manifest.md
+manifest2.md
+
+walk.py
