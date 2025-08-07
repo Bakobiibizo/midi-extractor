@@ -3,15 +3,16 @@ name = "midi-generator"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12,<3.13"
 dependencies = [
-    "matplotlib>=3.10.5",
-    "numpy>=2.3.2",
+    "matplotlib>=3.7.0",
+    "numpy>=1.20.0",
     "pretty-midi>=0.2.10",
-    "pydantic>=2.11.7",
+    "pydantic>=1.8.0",
     "pyyaml>=6.0.2",
-    "torch>=2.7.1",
-    "torchaudio>=2.7.1",
-    "torchvision>=0.22.1",
-    "tqdm>=4.67.1",
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "torchvision>=0.15.0",
+    "tqdm>=4.60.0",
+    "scipy>=1.7.0"
 ]
