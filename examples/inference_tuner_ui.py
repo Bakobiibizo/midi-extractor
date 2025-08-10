@@ -28,6 +28,9 @@ from tkinter.scrolledtext import ScrolledText
 
 import requests
 import pretty_midi as pm
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.patches as mpatches
 
 API_DEFAULT = "http://127.0.0.1:8989"
 
@@ -132,10 +135,29 @@ class InferenceTunerUI(tk.Tk):
         ttk.Label(run_row, textvariable=self.status_var).pack(side=tk.LEFT, padx=10)
 
         # Output
-        out = ttk.LabelFrame(root, text="MIDI Check Output")
-        out.pack(fill=tk.BOTH, expand=True)
-        self.output_text = ScrolledText(out, height=20)
+        # Bottom split: left text (stats), right piano roll (matplotlib)
+        bottom = ttk.Frame(root)
+        bottom.pack(fill=tk.BOTH, expand=True)
+
+        # Text stats
+        left = ttk.LabelFrame(bottom, text="MIDI Check Output")
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0,5))
+        self.output_text = ScrolledText(left, height=20)
         self.output_text.pack(fill=tk.BOTH, expand=True)
+
+        # Piano roll
+        right = ttk.LabelFrame(bottom, text="Piano Roll")
+        right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5,0))
+        self.figure = Figure(figsize=(5,4), dpi=100)
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_xlabel("Time (s)")
+        self.ax.set_ylabel("MIDI Pitch")
+        self.ax.set_ylim(20, 108)
+        self.ax.set_xlim(0, 1)
+        self.ax.grid(True, which="both", axis="both", alpha=0.2)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=right)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def on_load_file(self):
         f = filedialog.askopenfilename(title="Select audio file", filetypes=[("Audio", ".wav .mp3 .flac .m4a .aac"), ("All", "*.*")])
@@ -208,6 +230,7 @@ class InferenceTunerUI(tk.Tk):
             # Check MIDI
             stats = self._check_midi(midi_path)
             self._display_stats(self.audio_path, midi_path, stats)
+            self._draw_pianoroll(midi_path)
             self.status_var.set("Done")
         except Exception as e:
             self.status_var.set("Error")
@@ -263,6 +286,43 @@ class InferenceTunerUI(tk.Tk):
         self.output_text.insert(tk.END, json.dumps(_sanitize(stats), indent=2))
         self.output_text.insert(tk.END, "\n")
         self.output_text.see(tk.END)
+
+    def _draw_pianoroll(self, midi_path: Path):
+        try:
+            m = pm.PrettyMIDI(str(midi_path))
+            self.ax.clear()
+            self.ax.set_title("Piano Roll")
+            self.ax.set_xlabel("Time (s)")
+            self.ax.set_ylabel("MIDI Pitch")
+            self.ax.grid(True, which="both", axis="both", alpha=0.2)
+
+            # Compute end time
+            end_time = 0.0
+            colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown"]
+            legend_handles = []
+            for idx, inst in enumerate(m.instruments):
+                color = colors[idx % len(colors)]
+                if getattr(inst, "name", ""):
+                    legend_handles.append(mpatches.Patch(color=color, label=inst.name))
+                for n in inst.notes:
+                    x = n.start
+                    w = max(1e-3, n.end - n.start)
+                    y = n.pitch - 0.5
+                    rect = mpatches.Rectangle((x, y), w, 1.0, facecolor=color, edgecolor="none", alpha=0.8)
+                    self.ax.add_patch(rect)
+                    if n.end > end_time:
+                        end_time = n.end
+
+            # Axes limits
+            self.ax.set_xlim(0.0, max(1.0, end_time))
+            self.ax.set_ylim(20, 108)
+            if legend_handles:
+                self.ax.legend(handles=legend_handles, loc="upper right")
+            self.canvas.draw()
+        except Exception as e:
+            # Fallback: show message in text panel
+            self.output_text.insert(tk.END, f"\n[WARN] Piano roll render failed: {e}\n")
+            self.output_text.see(tk.END)
 
 
 def main():
