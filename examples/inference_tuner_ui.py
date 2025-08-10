@@ -218,29 +218,49 @@ class InferenceTunerUI(tk.Tk):
         notes = sum(len(inst.notes) for inst in m.instruments)
         insts = [
             {
-                "program": inst.program,
+                "program": int(getattr(inst, "program", 0)),
                 "name": getattr(inst, "name", ""),
-                "drums": inst.is_drum,
-                "notes": len(inst.notes),
-                "cc": len(inst.control_changes),
+                "drums": bool(getattr(inst, "is_drum", False)),
+                "notes": int(len(inst.notes)),
+                "cc": int(len(inst.control_changes)),
             }
             for inst in m.instruments
         ]
-        duration = m.get_end_time() if m else 0.0
+        duration = float(m.get_end_time()) if m else 0.0
         return {
             "path": str(midi_path),
             "exists": midi_path.exists(),
-            "instruments": len(m.instruments),
-            "total_notes": notes,
-            "total_cc": sum(i["cc"] for i in insts),
-            "duration_s": duration,
+            "instruments": int(len(m.instruments)),
+            "total_notes": int(notes),
+            "total_cc": int(sum(i["cc"] for i in insts)),
+            "duration_s": float(duration),
             "instrument_breakdown": insts,
         }
 
     def _display_stats(self, audio_path: Path, midi_path: Path, stats: dict):
+        def _to_py(x):
+            try:
+                import numpy as _np
+                if isinstance(x, (_np.integer,)):
+                    return int(x)
+                if isinstance(x, (_np.floating,)):
+                    return float(x)
+                if isinstance(x, (_np.bool_,)):
+                    return bool(x)
+            except Exception:
+                pass
+            return x
+
+        def _sanitize(obj):
+            if isinstance(obj, dict):
+                return {k: _sanitize(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_sanitize(v) for v in obj]
+            return _to_py(obj)
+
         self.output_text.insert(tk.END, f"Audio: {audio_path}\n")
         self.output_text.insert(tk.END, f"MIDI:  {midi_path}\n\n")
-        self.output_text.insert(tk.END, json.dumps(stats, indent=2))
+        self.output_text.insert(tk.END, json.dumps(_sanitize(stats), indent=2))
         self.output_text.insert(tk.END, "\n")
         self.output_text.see(tk.END)
 
