@@ -5,7 +5,7 @@ This module handles the training pipeline including data loading, model initiali
 and the training loop execution.
 """
 import json
-import logging
+import os
 from pathlib import Path
 from typing import Literal, Tuple, Optional, Dict, Any
 
@@ -17,6 +17,7 @@ from models.interpretable_transcription import TranscriptionModel
 from datasets.slakh_stem_dataset import SlakhStemDataset
 from datasets.baby_slakh_stem_dataset import BabySlakhStemDataset
 from train.trainer import Trainer
+from utils.logging import get_logger
 from utils.exceptions import (
     MIDIGeneratorError,
     DatasetError,
@@ -25,17 +26,8 @@ from utils.exceptions import (
     format_exception
 )
 
-# Configure logging
-logger = logging.getLogger(__name__)
-
-# Configure file handler only if not already configured
-if not logger.handlers:
-    file_handler = logging.FileHandler('training.log')
-    file_handler.setFormatter(
-        logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    )
-    logger.addHandler(file_handler)
-    logger.setLevel(logging.INFO)
+# Configure logger
+logger = get_logger(__name__, 'training.log')
 
 DatasetType = Literal["babyslakh", "slakh"]
 
@@ -140,7 +132,7 @@ def create_dataloaders(
             generator=torch.Generator().manual_seed(42)
         )
         
-        logger.info(f"Created datasets: {len(train_dataset)} training, {len(val_dataset)} validation samples")
+        logger.info(f"Created datasets: {len(train_dataset)} train, {len(val_dataset)} validation samples")
         
         # Configure dataloaders
         loader_args = {
@@ -179,7 +171,10 @@ def run_trainer(
     lr: float = 1e-4,
     output_dir: str = "checkpoints",
     val_split: float = 0.2,
-    dataset: str = "babyslakh"
+    dataset: str = "babyslakh",
+    mixed_precision: bool = True,
+    gradient_accumulation_steps: int = 1,
+    compile_model: bool = True
 ) -> None:
     """Run the training process.
     
@@ -191,6 +186,11 @@ def run_trainer(
         device: Device to use for training ("cuda" or "cpu")
         lr: Learning rate
         output_dir: Directory to save model checkpoints
+        val_split: Fraction of data to use for validation
+        dataset: Type of dataset ("babyslakh" or "slakh")
+        mixed_precision: Enable mixed precision training for faster GPU utilization
+        gradient_accumulation_steps: Number of gradient accumulation steps
+        compile_model: Compile model for faster training (PyTorch 2.0+)
         val_split: Fraction of data to use for validation
         dataset: Type of dataset ("babyslakh" or "slakh")
         
@@ -221,21 +221,21 @@ def run_trainer(
         except OSError as e:
             raise ConfigurationError(f"Failed to create output directory {output_dir}: {str(e)}") from e
             
-        logger.info("=" * 80)
-        logger.info(f"Starting training with configuration:")
-        logger.info(f"  Dataset: {json_path}")
-        logger.info(f"  Dataset type: {dataset}")
-        logger.info(f"  Batch size: {batch_size}")
-        logger.info(f"  Clip length: {clip_seconds}s")
-        logger.info(f"  Epochs: {num_epochs}")
-        logger.info(f"  Learning rate: {lr}")
-        logger.info(f"  Validation split: {val_split}")
-        logger.info(f"  Device: {device}")
-        logger.info(f"  Output directory: {output_dir.absolute()}")
-        logger.info("=" * 80 + "\n")
+        logger.section(
+            "🎵 Training Configuration",
+            f"Dataset: {json_path}\n"
+            f"Dataset type: {dataset}\n"
+            f"Batch size: {batch_size}\n"
+            f"Clip length: {clip_seconds}s\n"
+            f"Epochs: {num_epochs}\n"
+            f"Learning rate: {lr}\n"
+            f"Validation split: {val_split}\n"
+            f"Device: {device}\n"
+            f"Output directory: {output_dir.absolute()}"
+        )
         
         # Create dataloaders
-        logger.info("Creating dataloaders...")
+        logger.progress_section("Creating dataloaders", "Setting up training and validation data...")
         train_loader, val_loader = create_dataloaders(
             json_path=json_path,
             batch_size=batch_size,
@@ -245,16 +245,16 @@ def run_trainer(
         )
         
         # Initialize model
-        logger.info("Initializing model...")
+        logger.progress_section("Initializing model", "Setting up neural network architecture...")
         try:
             model = TranscriptionModel()
             model = model.to(device)
-            logger.info(f"Model initialized on device: {device}")
+            logger.success(f"Model initialized on device: {device}")
         except Exception as e:
             raise ModelError(f"Failed to initialize model: {str(e)}") from e
         
         # Initialize trainer
-        logger.info("Initializing trainer...")
+        logger.progress_section("Initializing trainer", "Setting up training pipeline...")
         try:
             trainer = Trainer(
                 json_path=json_path,
@@ -266,16 +266,19 @@ def run_trainer(
                 output_dir=str(output_dir),
                 model=model,
                 train_loader=train_loader,
-                val_loader=val_loader
+                val_loader=val_loader,
+                mixed_precision=mixed_precision,
+                gradient_accumulation_steps=gradient_accumulation_steps,
+                compile_model=compile_model
             )
         except Exception as e:
             raise ModelError(f"Failed to initialize trainer: {str(e)}") from e
         
         # Start training
-        logger.info("Starting training...")
+        logger.progress_section("Starting training", "Beginning neural network training...")
         try:
             trainer.run(num_epochs=num_epochs)
-            logger.info("Training completed successfully!")
+            logger.success("Training completed successfully!")
         except KeyboardInterrupt:
             logger.warning("Training interrupted by user")
             raise
@@ -283,7 +286,8 @@ def run_trainer(
             raise ModelError(f"Training failed: {str(e)}") from e
             
     except Exception as e:
-        logger.critical("Training failed with error:", exc_info=True)
+        logger.error(f"Training failed with error: {str(e)}")
+        logger.debug("Training error details:", exc_info=True)
         if not isinstance(e, MIDIGeneratorError):
             raise ModelError(f"Unexpected error during training: {str(e)}") from e
         raise

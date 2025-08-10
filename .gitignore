@@ -215,8 +215,20 @@ ehthumbs.db
 Thumbs.db
 
 # Dataset files
-datasets/
+datasets/*
 !datasets/.gitkeep
+
+# checkpoints
+checkpoints/*
+!checkpoints/.gitkeep
+
+# outputs
+outputs/*
+!outputs/.gitkeep
+
+# uploads
+uploads/*
+!uploads/.gitkeep
 
 # uv
 

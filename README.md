@@ -1,15 +1,18 @@
-# MIDI Extractor
+# MIDI Generator
 
-A production-grade PyTorch pipeline for extracting and processing MIDI data from audio datasets, with support for automatic music transcription using deep learning.
+A production-grade PyTorch pipeline for automatic music transcription and MIDI generation from audio datasets. Features a unified Rich-based CLI, comprehensive training system, and GPU monitoring.
 
 ## Features
 
-- 🎵 **Dataset Indexing**: Automatically index and filter Slakh dataset stems
+- 🎵 **Dataset Processing**: Index, filter, and visualize Slakh dataset stems
 - 🔊 **Audio Processing**: Convert audio to mel spectrograms with configurable parameters
 - 🎹 **MIDI Processing**: Extract onset, frame, and velocity targets from MIDI files
-- 🚀 **Production DataLoader**: Batching, padding, attention masks, and metadata passthrough
+- 🚀 **Production Training**: Complete training pipeline with progress tracking
 - 🧠 **Model Architecture**: CNN + LSTM/Transformer for music transcription
 - 🎯 **Multi-Target Learning**: Simultaneous onset, frame, and velocity prediction
+- 📊 **Rich CLI**: Beautiful command-line interface with progress bars and logging
+- 🎮 **GPU Monitoring**: Real-time GPU usage and system resource tracking
+- 📄 **Training Summaries**: Comprehensive training reports with recommendations
 
 ## Installation
 
@@ -24,65 +27,100 @@ uv sync
 
 ## Quick Start
 
-### 1. Index and Filter Dataset
+### 1. Dataset Indexing
+
+Create an index of your Slakh dataset:
 
 ```bash
-# Process Slakh dataset and create filtered index
-uv run src/cli.py --dataset datasets/babyslakh_16k
+# Index a dataset directory
+uv run src/cli.py index datasets/babyslakh_16k
+
+# With custom output file
+uv run src/cli.py index datasets/babyslakh_16k --output-file my_dataset.json
 ```
 
 This will:
 - Index all stems matching target instruments (piano, bass, synth)
-- Filter out silent audio and empty MIDI files
-- Generate `dataset.json` and `filtered_dataset.json`
-- Create sample visualizations
+- Generate a comprehensive dataset index file
+- Display progress with Rich formatting
 
-### 2. Use the DataLoader
+### 2. Dataset Filtering
 
-```python
-from src.datasets.dataloader import create_dataloader, create_train_val_dataloaders
+Filter out silent audio and empty MIDI files:
 
-# Simple dataloader
-dataloader = create_dataloader(
-    "datasets/babyslakh_16k/filtered_dataset.json",
-    batch_size=8,
-    clip_seconds=10.0
-)
+```bash
+# Filter dataset with default threshold (-40dB)
+uv run src/cli.py filter dataset_index.json
 
-# Train/validation split
-train_loader, val_loader = create_train_val_dataloaders(
-    "datasets/babyslakh_16k/filtered_dataset.json",
-    train_split=0.8,
-    batch_size=8
-)
-
-# Iterate through batches
-for batch in train_loader:
-    specs = batch["spec"]        # [B, n_mels, T]
-    onsets = batch["onset"]      # [B, T, 128]
-    frames = batch["frame"]      # [B, T, 128]
-    velocities = batch["velocity"] # [B, T, 128]
-    masks = batch["mask"]        # [B, T] - attention masks
-    metadata = batch["meta"]     # List of track info
+# Custom threshold and output
+uv run src/cli.py filter dataset_index.json --threshold -35 --output filtered_data.json
 ```
 
-### 3. Model Training (Coming Soon)
+### 3. Dataset Visualization
 
-```python
-from src.model.InterpretableTranscription import InterpretableTranscription
-from src.model.InterpretableTranscription.loss import loss_fn
+Visualize samples from your dataset:
 
-# Initialize model
-model = InterpretableTranscription()
+```bash
+# Visualize random samples
+uv run src/cli.py visualize dataset_index.json
 
-# Training loop
-for batch in train_loader:
-    outputs = model(batch["spec"])
-    loss, loss_dict = loss_fn(outputs, {
-        "onset": batch["onset"],
-        "frame": batch["frame"],
-        "velocity": batch["velocity"]
-    })
+# Specific number of samples with custom output
+uv run src/cli.py visualize dataset_index.json --num-samples 10 --output-dir visualizations
+```
+
+### 4. Model Training
+
+Train your model with comprehensive monitoring:
+
+```bash
+# Quick validation run (recommended first)
+uv run src/cli.py train dataset_index.json --epochs 5 --batch-size 16 --dataset babyslakh
+
+# Production training
+uv run src/cli.py train dataset_index.json --epochs 100 --batch-size 32 --lr 3e-5 --dataset slakh
+
+# GPU-optimized training (for RTX A6000 or similar)
+uv run src/cli.py train dataset_index.json --epochs 100 --batch-size 64 --clip-seconds 20.0 --lr 2e-5
+```
+
+**Training Features:**
+- 📊 Real-time progress bars with Rich formatting
+- 🎮 GPU memory usage monitoring
+- 🧠 System resource tracking
+- 📄 Comprehensive training summaries saved to log files
+- 💡 Intelligent recommendations (overfitting detection, etc.)
+- 🏆 Automatic best model checkpointing
+
+## CLI Commands
+
+### Available Commands
+
+| Command | Description | Example |
+|---------|-------------|----------|
+| `index` | Index dataset directory | `uv run src/cli.py index datasets/babyslakh_16k` |
+| `filter` | Filter dataset by audio/MIDI quality | `uv run src/cli.py filter dataset.json --threshold -35` |
+| `visualize` | Create sample visualizations | `uv run src/cli.py visualize dataset.json --num-samples 5` |
+| `train` | Train the model | `uv run src/cli.py train dataset.json --epochs 50` |
+
+### Training Parameters
+
+| Parameter | Description | Default | Recommended |
+|-----------|-------------|---------|-------------|
+| `--batch-size` | Samples per batch | 8 | 16-64 (depending on GPU) |
+| `--clip-seconds` | Audio clip length | 10.0 | 10.0-20.0 seconds |
+| `--epochs` | Training epochs | 10 | 50-100 |
+| `--lr` | Learning rate | 1e-4 | 1e-4 to 5e-5 |
+| `--device` | Training device | cuda | cuda (if available) |
+| `--dataset` | Dataset type | babyslakh | babyslakh or slakh |
+| `--output-dir` | Checkpoint directory | checkpoints | Custom path |
+| `--val-split` | Validation fraction | 0.1 | 0.1-0.2 |
+
+### Debug Mode
+
+Enable detailed logging and error information:
+
+```bash
+uv run src/cli.py train dataset.json --debug
 ```
 
 ## Project Structure
@@ -92,13 +130,17 @@ src/
 ├── datasets/
 │   ├── stem_indexer.py          # Dataset indexing and filtering
 │   ├── slakh_stem_dataset.py    # PyTorch Dataset implementation
-│   ├── dataloader.py            # Production DataLoader utilities
+│   ├── baby_slakh_stem_dataset.py # BabySlakh Dataset implementation
 │   └── visualize_sample.py      # Visualization tools
-├── model/
-│   └── InterpretableTranscription/
-│       ├── interpretable_transcription.py  # Model architecture
-│       └── loss.py              # Loss functions
-└── cli.py                       # Command-line interface
+├── models/
+│   └── interpretable_transcription.py # Model architecture
+├── train/
+│   ├── trainer.py               # Training loop and logic
+│   └── run_trainer.py           # Training orchestration
+├── utils/
+│   ├── logging.py               # Unified Rich logging system
+│   └── exceptions.py            # Custom exceptions
+└── cli.py                       # Rich-based command-line interface
 ```
 
 ## Dataset Format
@@ -133,24 +175,62 @@ Track00001/
 - **Audio Silence**: -35 dB (configurable)
 - **MIDI Empty**: No notes in any instrument
 
+## Training Output
+
+### Training Summary
+
+After training completes, you'll get a comprehensive summary including:
+
+- 🎯 **Training Metrics**: Final losses, accuracies, best model performance
+- ⏱️ **Timing Information**: Total training time, epochs completed
+- 🎮 **GPU Usage**: Memory utilization, GPU name and specs
+- 🧠 **System Resources**: CPU and memory usage during training
+- 📁 **Output Files**: Model checkpoints, log files, directory info
+- 💡 **Recommendations**: Overfitting detection, training suggestions
+
+### Log Files
+
+Training summaries are automatically saved as Rich-formatted log files:
+
+```
+checkpoints/your_run/
+├── best_model.pt                    # Best performing model
+├── checkpoint_epoch_N.pt            # Regular checkpoints
+└── training_summary_YYYYMMDD_HHMMSS.log  # Detailed training log
+```
+
 ## Development
 
-### Testing the DataLoader
+### Using the Python API
 
-```bash
-# Test dataloader functionality
-uv run -m src.datasets.dataloader
+```python
+from src.datasets.slakh_stem_dataset import SlakhStemDataset
+from src.train.trainer import Trainer
+from src.utils.logging import get_logger
+
+# Initialize logger
+logger = get_logger(__name__)
+
+# Create dataset
+dataset = SlakhStemDataset("dataset.json", clip_seconds=10.0)
+
+# Initialize trainer
+trainer = Trainer(
+    json_path="dataset.json",
+    batch_size=16,
+    num_epochs=50,
+    device="cuda"
+)
+
+# Start training
+trainer.run()
 ```
 
 ### Visualizing Samples
 
-```python
-from src.datasets.slakh_stem_dataset import SlakhStemDataset
-from src.datasets.visualize_sample import visualize_sample
-
-dataset = SlakhStemDataset("datasets/babyslakh_16k/filtered_dataset.json")
-sample = dataset[0]
-visualize_sample(sample, output_path="sample.png")
+```bash
+# Use the CLI for easy visualization
+uv run src/cli.py visualize dataset.json --num-samples 5 --output-dir viz
 ```
 
 ## Model Architecture

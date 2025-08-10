@@ -10,8 +10,8 @@ def loss_fn(outputs, targets, weights=None):
     if weights is None:
         weights = {"onset": 1.0, "frame": 1.0, "velocity": 0.5}
 
-    onset_loss = F.binary_cross_entropy(outputs["onset"], targets["onset"])
-    frame_loss = F.binary_cross_entropy(outputs["frame"], targets["frame"])
+    onset_loss = F.binary_cross_entropy_with_logits(outputs["onset"], targets["onset"])
+    frame_loss = F.binary_cross_entropy_with_logits(outputs["frame"], targets["frame"])
     velocity_loss = F.mse_loss(outputs["velocity"], targets["velocity"])
 
     total = (

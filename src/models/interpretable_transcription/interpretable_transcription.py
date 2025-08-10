@@ -47,9 +47,9 @@ class TranscriptionModel(nn.Module):
         x, _ = self.lstm(x)  # [B, T, H*2]
 
         return {
-            "onset": torch.sigmoid(self.onset_head(x)),     # [B, T, 128]
-            "frame": torch.sigmoid(self.frame_head(x)),     # [B, T, 128]
-            "velocity": self.velocity_head(x)               # [B, T, 128]
+            "onset": self.onset_head(x),                   # [B, T, 128] - raw logits
+            "frame": self.frame_head(x),                   # [B, T, 128] - raw logits  
+            "velocity": self.velocity_head(x)               # [B, T, 128] - sigmoid applied in head
         }
 
 

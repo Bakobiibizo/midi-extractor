@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import torch
 import numpy as np
 
-def visualize_sample(sample, output_path="datasets/babyslakh_16k/sample.png", max_len=1000):
+
+def visualize_sample(sample, output_path="examples/sample.png", max_len=1000):
     spec = sample["spec"].numpy()
     onset = sample["onset"].numpy()
     pitch_range = np.arange(128)

@@ -16,6 +16,7 @@ setup(
         "pyyaml>=6.0.2",
         "tqdm>=4.60.0",
         "scipy>=1.7.0"
+        "setuptools>=80.9.0",
     ],
     python_requires=">=3.9,<3.13",
 )

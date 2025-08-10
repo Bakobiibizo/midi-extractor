@@ -1,0 +1,41 @@
+{
+  "bass": {
+    "instrument_name": "Bass",
+    "pitch_min": 28,
+    "pitch_max": 48,
+    "smooth_window": 5,
+    "min_ioi": 0.24,
+    "merge_gap": 0.02,
+    "min_note_duration": 0.10,
+    "onset_threshold": 0.05,
+    "frame_threshold": 0.14,
+    "frame_threshold_off": 0.10,
+    "enable_fallback_segmentation": true
+  },
+  "piano": {
+    "instrument_name": "Piano",
+    "pitch_min": 21,
+    "pitch_max": 108,
+    "smooth_window": 7,
+    "min_ioi": 0.04,
+    "merge_gap": 0.03,
+    "min_note_duration": 0.05,
+    "onset_threshold": 0.03,
+    "frame_threshold": 0.08,
+    "frame_threshold_off": 0.04,
+    "enable_fallback_segmentation": false
+  },
+  "melody": {
+    "instrument_name": "Melody",
+    "pitch_min": 48,
+    "pitch_max": 84,
+    "smooth_window": 9,
+    "min_ioi": 0.12,
+    "merge_gap": 0.08,
+    "min_note_duration": 0.18,
+    "onset_threshold": 0.04,
+    "frame_threshold": 0.10,
+    "frame_threshold_off": 0.05,
+    "enable_fallback_segmentation": false
+  }
+}
