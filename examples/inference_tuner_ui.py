@@ -169,10 +169,10 @@ class InferenceTunerUI(tk.Tk):
     def _run_job(self):
         try:
             api = self.api_var.get().rstrip("/")
-            files = {"file": (self.audio_path.name, open(self.audio_path, "rb"), "application/octet-stream")}
+            files = {"audio_file": (self.audio_path.name, open(self.audio_path, "rb"), "application/octet-stream")}
             params = self._params_dict()
-            # Submit transcription
-            r = requests.post(f"{api}/transcribe", files=files, data=params, timeout=120)
+            # Submit transcription: params go in query string, file in multipart
+            r = requests.post(f"{api}/transcribe", files=files, params=params, timeout=120)
             r.raise_for_status()
             job = r.json()
             job_id = job.get("job_id")
