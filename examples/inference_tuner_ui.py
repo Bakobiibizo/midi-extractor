@@ -93,23 +93,91 @@ class InferenceTunerUI(tk.Tk):
             ttk.Label(controls, text=label).grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
             v = tk.DoubleVar(value=init)
             setattr(self, varname, v)
-            s = ttk.Scale(controls, from_=from_, to=to_, orient=tk.HORIZONTAL, value=init, command=lambda _=None, vv=v: vv.set(float(s.get())))
+            s = ttk.Scale(
+                controls,
+                from_=from_,
+                to=to_,
+                orient=tk.HORIZONTAL,
+                value=init,
+                command=lambda _=None, vv=v: vv.set(float(s.get())),
+            )
             s.grid(row=row, column=col+1, sticky=tk.EW, padx=5)
-            s.configure(length=220)
-            # Show value
+            s.configure(length=200)
+            # Value label
             val_lbl = ttk.Label(controls, textvariable=v, width=6)
             val_lbl.grid(row=row, column=col+2, padx=5)
+            # Entry box (two-way sync)
+            e = ttk.Entry(controls, width=8)
+            e.insert(0, f"{init:.3f}")
+            def _apply_from_entry():
+                try:
+                    val = float(e.get())
+                except Exception:
+                    val = init
+                if val < from_:
+                    val = from_
+                if val > to_:
+                    val = to_
+                v.set(val)
+                s.set(val)
+                e.delete(0, tk.END)
+                e.insert(0, f"{val:.3f}")
+            e.bind("<FocusOut>", lambda _ev=None: _apply_from_entry())
+            e.bind("<Return>", lambda _ev=None: _apply_from_entry())
+            # Keep entry synced when slider moves
+            def _on_var_change(*_):
+                try:
+                    cur = float(v.get())
+                except Exception:
+                    return
+                e.delete(0, tk.END)
+                e.insert(0, f"{cur:.3f}")
+            v.trace_add("write", lambda *_: _on_var_change())
+            e.grid(row=row, column=col+3, padx=5, sticky=tk.W)
             return v
 
         def add_int(row, col, label, varname, from_, to_, init):
             ttk.Label(controls, text=label).grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
             v = tk.IntVar(value=init)
             setattr(self, varname, v)
-            s = ttk.Scale(controls, from_=from_, to=to_, orient=tk.HORIZONTAL, value=init, command=lambda _=None, vv=v: vv.set(int(round(s.get()))))
+            s = ttk.Scale(
+                controls,
+                from_=from_,
+                to=to_,
+                orient=tk.HORIZONTAL,
+                value=init,
+                command=lambda _=None, vv=v: vv.set(int(round(s.get()))),
+            )
             s.grid(row=row, column=col+1, sticky=tk.EW, padx=5)
-            s.configure(length=220)
+            s.configure(length=200)
             val_lbl = ttk.Label(controls, textvariable=v, width=6)
             val_lbl.grid(row=row, column=col+2, padx=5)
+            e = ttk.Entry(controls, width=8)
+            e.insert(0, str(init))
+            def _apply_from_entry():
+                try:
+                    val = int(round(float(e.get())))
+                except Exception:
+                    val = init
+                if val < int(from_):
+                    val = int(from_)
+                if val > int(to_):
+                    val = int(to_)
+                v.set(val)
+                s.set(val)
+                e.delete(0, tk.END)
+                e.insert(0, str(val))
+            e.bind("<FocusOut>", lambda _ev=None: _apply_from_entry())
+            e.bind("<Return>", lambda _ev=None: _apply_from_entry())
+            def _on_var_change(*_):
+                try:
+                    cur = int(v.get())
+                except Exception:
+                    return
+                e.delete(0, tk.END)
+                e.insert(0, str(cur))
+            v.trace_add("write", lambda *_: _on_var_change())
+            e.grid(row=row, column=col+3, padx=5, sticky=tk.W)
             return v
 
         colA, colB = 0, 3
