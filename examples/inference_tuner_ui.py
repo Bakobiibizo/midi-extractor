@@ -32,7 +32,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.patches as mpatches
 
-API_DEFAULT = "http://127.0.0.1:8989"
+API_DEFAULT = "https://midi-ui-synai.ngrok.dev"
 
 
 @dataclass
